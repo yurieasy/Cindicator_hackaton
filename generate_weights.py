@@ -2,6 +2,10 @@ import numpy as np
 import pandas as pd
 
 
+def linex(err, alpha):
+    return np.exp(-alpha * err) + alpha * err - 1
+
+
 def get_user_params(user_mem, uid):
     if len(user_mem[uid]) < 2:
         s = 1000000.0
@@ -24,14 +28,22 @@ def generate_weights(df):
     result = []
 
     for cur_date in sorted(dates):
+        IS_LINEX = True
         ds1tdt = df[df["event_finished_at"] == cur_date]
         uids = set(ds1tdt["user_id"].values)
         for uid in uids:
             userguess = ds1tdt[ds1tdt["user_id"] == uid]
             mu_min, sigma_min = get_user_params(user_mem_min, uid)
             mu_max, sigma_max = get_user_params(user_mem_max, uid)
-            error_min = (userguess["real_min"] - userguess["prediction_min"])
-            error_max = (userguess["real_max"] - userguess["prediction_max"])
+            if IS_LINEX:
+                alpha = 0.02
+                max_e = userguess["prediction_max"] - userguess["real_max"]
+                min_e = userguess["prediction_min"] - userguess["real_min"]
+                error_max = linex(max_e, -alpha)
+                error_min = linex(min_e, -alpha)
+            else:
+                error_min = (userguess["real_min"] - userguess["prediction_min"])
+                error_max = (userguess["real_max"] - userguess["prediction_max"])
             user_mem_min[uid].append(error_min.values[0])
             user_mem_max[uid].append(error_max.values[0])
 
