@@ -8,7 +8,7 @@ tickers_dict_f_min = {}
 tickers_dict_f_max = {}
 
 
-ds = pd.DataFrame.from_csv('/Users/batfather/Downloads/pricing_answers.csv').groupby('event_id')
+ds = pd.DataFrame.from_csv('pricing_answers.csv').groupby('event_id')
 for i in ds:
     mean_max = i[1]['prediction_max'].values.mean()
     mean_min = i[1]['prediction_min'].values.mean()
