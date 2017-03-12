@@ -4,7 +4,7 @@ import pandas as pd
 
 def get_user_params(user_mem, uid):
     if len(user_mem[uid]) < 2:
-        s = 100.0
+        s = 1000000.0
         m = 0.0
     else:
         s = np.std(user_mem[uid])
@@ -13,7 +13,7 @@ def get_user_params(user_mem, uid):
 
 
 def generate_weights(df):
-    dates = set(df["event_finished_at"].values)
+    dates = df["event_finished_at"].unique()
     user_mem_min = {}
     user_mem_max = {}
     for uid in df.user_id.values:
