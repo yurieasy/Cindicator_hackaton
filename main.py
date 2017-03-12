@@ -64,6 +64,20 @@ def predict(df):
     return pd.DataFrame(results, columns=header)
 
 
+def calc_metric_advantage(results, f_metric, name):
+    base_min = f_metric(results["y_true_min"], results["y_baseline_min"])
+    weight_min = f_metric(results["y_true_min"], results["y_weighted_min"])
+    base_max = f_metric(results["y_true_max"], results["y_baseline_max"])
+    weight_max = f_metric(results["y_true_max"], results["y_weighted_max"])
+    print("Min %s (baseline/weighted)" % name)
+    print(base_min)
+    print(weight_min)
+    print("Advantage: %f" % (base_min - weight_min))
+    print("Max (baseline/weighted)")
+    print(base_max)
+    print(weight_max)
+    print("Advantage: %f" % (base_max - weight_max))
+
 if __name__ == "__main__":
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
@@ -73,25 +87,16 @@ if __name__ == "__main__":
     df = pd.DataFrame.from_csv('pricing_answers.csv', header=0, index_col=None, parse_dates=['event_finished_at'])
     df = df.loc[df.ticker_id == ticker]
 
+    results_dirty = predict(df)
+    calc_metric_advantage(results_dirty, mean_absolute_error, "MAE")
     df = remove_outliers(df)
-    results = predict(df)
+    result_clear = predict(df)
 
-    metric = mean_absolute_error
+    results = result_clear
+    results["y_baseline_min"] = results_dirty["y_baseline_min"]
+    results["y_baseline_max"] = results_dirty["y_baseline_max"]
 
-    base_min = metric(results["y_true_min"], results["y_baseline_min"])
-    weight_min = metric(results["y_true_min"], results["y_weighted_min"])
-    base_max = metric(results["y_true_max"], results["y_baseline_max"])
-    weight_max = metric(results["y_true_max"], results["y_weighted_max"])
-    print("Min (baseline/weighted)")
-    print(base_min)
-    print(weight_min)
-    print("Advantage: %f" % (base_min - weight_min))
-    print("Max (baseline/weighted)")
-    print(base_max)
-    print(weight_max)
-    print("Advantage: %f" % (base_max - weight_max))
+    calc_metric_advantage(results, rmsle, "RMSLE")
+    calc_metric_advantage(results, mean_absolute_error, "MAE")
 
     plot_ticker(results)
-    logging.info(mean_absolute_error(results["y_true"], results["y_baseline"]))
-    logging.info(mean_absolute_error(results["y_true"], results["y_weighted"]))
-    logging.info(mean_absolute_error(results["y_true"], results["y_adjusted"]))
