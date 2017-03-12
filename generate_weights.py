@@ -40,7 +40,7 @@ def generate_weights(df):
                 max_e = userguess["prediction_max"] - userguess["real_max"]
                 min_e = userguess["prediction_min"] - userguess["real_min"]
                 error_max = linex(max_e, -alpha)
-                error_min = linex(min_e, -alpha)
+                error_min = linex(min_e, alpha)
             else:
                 error_min = (userguess["real_min"] - userguess["prediction_min"])
                 error_max = (userguess["real_max"] - userguess["prediction_max"])
