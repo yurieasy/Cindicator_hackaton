@@ -1,11 +1,16 @@
 import numpy as np
 import pandas as pd
 
+#LINEX_ALPHA = 0.02
+LINEX_ALPHA = 0.35
 
+# Linex function
 def linex(err, alpha):
-    return np.exp(-alpha * err) + alpha * err - 1
+    ret = np.exp(-alpha * err) + alpha * err - 1
+    # print("E", err, "L", ret)
+    return ret
 
-
+# Get current parameters for a user: mu and std
 def get_user_params(user_mem, uid):
     if len(user_mem[uid]) < 2:
         s = 1000000.0
@@ -15,11 +20,12 @@ def get_user_params(user_mem, uid):
         m = np.mean(user_mem[uid])
     return m, s
 
-
-def generate_weights(df):
+# Simulate runtime mode and set weights
+def generate_weights(df, IS_LINEX = False):
     dates = df["event_finished_at"].unique()
     user_mem_min = {}
     user_mem_max = {}
+
     for uid in df.user_id.values:
         user_mem_min[uid] = []
         user_mem_max[uid] = []
@@ -28,7 +34,6 @@ def generate_weights(df):
     result = []
 
     for cur_date in sorted(dates):
-        IS_LINEX = True
         ds1tdt = df[df["event_finished_at"] == cur_date]
         uids = set(ds1tdt["user_id"].values)
         for uid in uids:
@@ -36,7 +41,7 @@ def generate_weights(df):
             mu_min, sigma_min = get_user_params(user_mem_min, uid)
             mu_max, sigma_max = get_user_params(user_mem_max, uid)
             if IS_LINEX:
-                alpha = 0.02
+                alpha = LINEX_ALPHA
                 max_e = userguess["prediction_max"] - userguess["real_max"]
                 min_e = userguess["prediction_min"] - userguess["real_min"]
                 error_max = linex(max_e, -alpha)

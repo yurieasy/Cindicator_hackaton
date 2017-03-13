@@ -1,6 +1,5 @@
 import pandas as pd
 
-
 def remove_outliers(df):
     new_data = pd.DataFrame(df.keys())
     df = df.groupby('event_id')

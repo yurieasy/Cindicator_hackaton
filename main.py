@@ -5,18 +5,20 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_error
 
 from cleaning import remove_outliers
-from generate_weights import generate_weights
-from visualise import plot_ticker
 
+from generate_weights import generate_weights
+from generate_weights import linex
+
+from generate_weights import LINEX_ALPHA
+
+from visualise import plot_ticker
 from metrics import rmsle, rmse
 
 pd.options.mode.chained_assignment = None
 
-
 def adjust_weights(weights):
     weights = 1 / weights.apply(np.sqrt)
     return weights.div(weights.sum(axis=0), axis=0)
-
 
 def predict_sides(df):
     date = df["event_finished_at"].values[0]
@@ -34,9 +36,13 @@ def predict_sides(df):
     return [date, y_true_min, predicted_baseline_min, predicted_weighted_min, y_true_max,
             predicted_baseline_max, predicted_weighted_max]
 
-
 def predict(df):
-    weights = generate_weights(df)
+
+    # Weights generation
+    # Flag switches on/of the linex loss function
+    weights = generate_weights(df, False)
+
+    # Writing weights to csv
     # weights.to_csv("weights.csv", index=None)
     # else:
     #     weights = pd.read_csv("weights.csv")
@@ -83,12 +89,14 @@ if __name__ == "__main__":
     logger.setLevel(logging.INFO)
 
     ticker = "c5e2ca55-3606-40ad-aae5-55be180a7de5"
+    #ticker = "a0c756e7-481a-4a9e-bed1-32db7cd40279"
 
     df = pd.DataFrame.from_csv('pricing_answers.csv', header=0, index_col=None, parse_dates=['event_finished_at'])
     df = df.loc[df.ticker_id == ticker]
 
     results_dirty = predict(df)
     calc_metric_advantage(results_dirty, mean_absolute_error, "MAE")
+
     df = remove_outliers(df)
     result_clear = predict(df)
 
@@ -96,7 +104,31 @@ if __name__ == "__main__":
     results["y_baseline_min"] = results_dirty["y_baseline_min"]
     results["y_baseline_max"] = results_dirty["y_baseline_max"]
 
+    #-------------------------------------------------------------------
+    # Save data to csv for bot
+    #-------------------------------------------------------------------
+    def to_str(ts):
+        ts = ts[0]
+        ts = pd.to_datetime(str(ts))
+        return ts.strftime('%Y-%m-%d')
+
+    to_csv = results[['event_finished_at', 'y_weighted_min', 'y_weighted_max']].copy()
+    to_csv['event_finished_at'] = to_csv['event_finished_at'].apply(to_str)
+    to_csv.columns = ['end_time', 'averageWeightedMin', 'averageWeightedMax']
+    to_csv.to_csv('weighted.csv')
+
+    #-------------------------------------------------------------------
+    # Apply metrics
+    #-------------------------------------------------------------------
     calc_metric_advantage(results, rmsle, "RMSLE")
     calc_metric_advantage(results, mean_absolute_error, "MAE")
 
+    def linex_func(vtrue, vpred):
+        return np.mean(linex(vpred - vtrue, LINEX_ALPHA))
+
+    calc_metric_advantage(results, linex_func, "LINEX")
+
+    #-------------------------------------------------------------------
+    # Draw plots
+    #-------------------------------------------------------------------
     plot_ticker(results)
